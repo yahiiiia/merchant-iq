@@ -20,7 +20,8 @@ Available packages and libraries:
 
 # Backend and access control
 
-- MerchantIQ uses the connected Supabase project for PostgreSQL and Auth. Business data is not a browser-only demo; never restore seeded data or silent demo fallbacks.
+- Connected MerchantIQ uses Supabase PostgreSQL and Auth, never seeded business data or silent demo fallbacks.
+- Explicit offline preview is a development-serve-only exception: `.env.development` opts in via `VITE_OFFLINE_PREVIEW=true`; Vite compiles its gate false for every build. Keep fictional memory-only data isolated in `src/lib/offline-crm.ts`, with a visible test-data banner, no Supabase client construction/requests or fabricated session/role, and no operational user management or VPS controls. Never add automatic fallback or production activation. See README.md for boundaries.
 - Tables are profiles, merchants, contacts, leads. Existing field column names use quoted camelCase. Query hooks/async mutations are in src/lib/crm.tsx; fields/CSV helpers are in src/lib/crm-fields.ts.
 - Exactly two roles: super_admin and business_user. Pending/approved/disabled are separate profile states. New signups are pending Business Users; first-admin approval is a trusted explicit action, never first-signup promotion.
 - Enforce approval/roles in database RLS and guarded routes. Profile role/status updates use crm_manage_user; direct authenticated profile writes are not granted. Only Super Admins may delete records, invoke administrative imports, access Access or VPS Control.

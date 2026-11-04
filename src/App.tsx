@@ -1,9 +1,10 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SessionContextProvider } from "@/components/SessionProvider";
+import { OFFLINE_PREVIEW } from "@/lib/offline-preview";
 import AuthGuard from "@/components/AuthGuard";
 import CRMLayout from "@/components/CRMLayout";
 import Login from "@/pages/Login";
@@ -17,15 +18,15 @@ import VPSControl from "@/pages/VPSControl";
 import Access from "@/pages/Access";
 import NotFound from "@/pages/NotFound";
 
-const queryClient = new QueryClient({ defaultOptions: { queries: { staleTime: 10000, retry: 1, refetchOnWindowFocus: true } } });
+const queryClient = new QueryClient({ defaultOptions: { queries: { networkMode: OFFLINE_PREVIEW ? "always" : "online", staleTime: 10000, retry: 1, refetchOnWindowFocus: true } } });
 export default function App() {
   return <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
     <QueryClientProvider client={queryClient}><TooltipProvider><Toaster richColors position="bottom-right" />
       <SessionContextProvider><BrowserRouter><Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/auth/callback" element={<AuthCallback />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
-        <Route path="/pending" element={<Pending />} />
+        <Route path="/login" element={OFFLINE_PREVIEW ? <Navigate to="/" replace /> : <Login />} />
+        <Route path="/auth/callback" element={OFFLINE_PREVIEW ? <Navigate to="/" replace /> : <AuthCallback />} />
+        <Route path="/reset-password" element={OFFLINE_PREVIEW ? <Navigate to="/" replace /> : <ResetPassword />} />
+        <Route path="/pending" element={OFFLINE_PREVIEW ? <Navigate to="/" replace /> : <Pending />} />
         <Route element={<AuthGuard />}><Route element={<CRMLayout />}>
           <Route path="/" element={<Index />} />
           <Route path="/merchants" element={<Records key="merchants" entity="merchants" />} />

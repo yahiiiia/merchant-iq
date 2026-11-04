@@ -6,6 +6,8 @@ import { PageHeading, Pagination, SearchInput, StatusBadge } from "@/components/
 import { Button } from "@/components/ui/button";
 import { errorMessage } from "@/lib/errors";
 import { toast } from "sonner";
+import { OFFLINE_PREVIEW } from "@/lib/offline-preview";
+import OfflineAccess from "@/components/OfflineAccess";
 
 function UserRow({ user, onSaved }: { user: Profile; onSaved: () => Promise<void> }) {
   const [role, setRole] = useState(user.role), [status, setStatus] = useState(user.status), [busy, setBusy] = useState(false);
@@ -20,6 +22,10 @@ function UserRow({ user, onSaved }: { user: Profile; onSaved: () => Promise<void
   return <tr><td className="table-cell"><span className="block font-semibold">{user.name || user.email}</span><span className="mt-1 block text-[10px] text-muted-foreground">{user.email}</span><span className="mt-1 block font-mono text-[9px] text-muted-foreground">{user.id}</span></td><td className="table-cell"><select aria-label={`Role for ${user.email}`} className="field h-9 text-xs" value={role} onChange={e => setRole(e.target.value as Profile['role'])} disabled={busy}><option value="business_user">Business User</option><option value="super_admin">Super Admin</option></select></td><td className="table-cell"><select aria-label={`Account status for ${user.email}`} className="field h-9 text-xs" value={status} onChange={e => setStatus(e.target.value as Profile['status'])} disabled={busy}><option value="pending">Pending</option><option value="approved">Approved</option><option value="disabled">Disabled</option></select></td><td className="table-cell"><StatusBadge value={user.status} /></td><td className="table-cell text-right"><Button className="h-8 text-[11px]" disabled={busy || (role === user.role && status === user.status)} onClick={() => void save()}>{busy ? "Saving…" : "Save changes"}</Button></td></tr>;
 }
 export default function Access() {
+  return OFFLINE_PREVIEW ? <OfflineAccess /> : <ConnectedAccess />;
+}
+
+function ConnectedAccess() {
   const { refreshProfile } = useSession();
   const [users, setUsers] = useState<Profile[]>([]), [total, setTotal] = useState(0), [page, setPage] = useState(1), [search, setSearch] = useState(""), [error, setError] = useState(""), [loading, setLoading] = useState(true);
   const load = useCallback(async () => {

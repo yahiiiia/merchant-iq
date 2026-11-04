@@ -12,7 +12,25 @@ React/TypeScript CRM using Supabase PostgreSQL and Auth, React Router, TanStack 
 - `crm_list`: security-invoker, RLS-respecting server search/filter/sort/pagination and counts, with joined labels and database-wide duplicate flags. Merchant search and duplicate matching have indexes. Filter options and dashboard aggregates are computed in the database.
 - `crm_import_merchants`: Super Admin check plus transactional import; 1–2,000 records, server IDs and ingestion timestamps. Clients may export permitted data. Restricting the administrative import RPC does not prevent an approved user from automating their permitted ordinary create operations.
 
-Business records are persisted in PostgreSQL. There is no demo seed, local-storage business database, or demo fallback. Auth sessions and the theme preference can be stored in the browser as normal client preferences/session state.
+In connected mode, business records are persisted in PostgreSQL. There is no production demo seed, local-storage business database, or automatic demo fallback. Auth sessions and the theme preference can be stored in the browser as normal client preferences/session state.
+
+## Explicit development-only offline preview
+
+Local preview is explicitly enabled by `VITE_OFFLINE_PREVIEW=true` in `.env.development`. It is not triggered by missing credentials, failed requests, account state, URL parameters, or browser storage. To return to connected development, set the flag to `false` (or override it in `.env.development.local`) and restart the development server after changing the environment. Offline `/login`, `/auth/callback`, `/pending`, and `/reset-password` redirect to the local workspace without mounting auth components.
+
+Safety boundaries:
+
+- `vite.config.ts` only enables the compile-time flag for development **serve**, never build or preview commands. All builds—including `build:dev` and builds with the environment flag true—compile the gate to false. `src/lib/offline-preview.ts` also requires Vite's `DEV` flag. Deployed builds cannot activate this through a URL, storage, or runtime environment variable. Do not deploy the development server.
+- The hosted Supabase client is **not constructed** offline. A fail-closed blocker throws if code accidentally accesses it, before any request. The real session provider is not mounted: no auth initialization, stored-session refresh, profile polling, or auth subscription. Existing hosted session storage is untouched.
+- `src/lib/offline-crm.ts` loads only through development-gated dynamic imports. Fictional merchants, contacts, leads, and assignees live in this tab's JavaScript memory, with a separate query-cache identity. No localStorage business records, IndexedDB, sync queue, hosted reads/writes, schema changes, or RLS changes.
+- Overview, directories, filters, pagination, record details, linked-record pickers, local create/edit/delete, and local CSV import/export use isolated test data. Queries also run when the browser reports offline. Unknown processing volumes remain null. Local imports are all-or-nothing and should contain fictional data only. Exports are named `MerchantIQ-OFFLINE-TEST-…`.
+- A persistent amber banner identifies the mode and memory-only data. Reloading or **Reset test data** discards local changes and restores fictional records. Tabs are independent; hot reload can also reset memory. There is no synchronization back to Supabase.
+- The session remains null and `isAdmin` false: offline navigation is not a real role, approval, or account. Access shows disabled read-only fictional examples, with no real profile queries or account-management actions. Authentication/user management and VPS operations are non-operational. VPS remains disconnected with all controls disabled and no fabricated metrics/jobs.
+- Connected/production authentication, approval gates, administrator checks, and database RLS remain in place. No service-role credentials are used in browser code.
+
+This is a local-development preview, not an installable offline/PWA distribution: a running local dev server is still needed to serve application assets. No hosted Supabase connectivity or account is required for CRM screens.
+
+Offline-change verification: source inspection traced the compile-time gate, client construction, provider mounting, auth routes, CRM data hooks/mutations/exports, and admin screen branches. TypeScript/build/lint, emitted-bundle inspection, browser network assertions, and runtime interaction tests have **not** been performed in this editing session. Runtime acceptance checks should cover all routes and local CRUD/import/export with network disconnected; zero Supabase-origin requests, including with a previously stored session; reload/reset isolation; disabled admin/VPS operations; and production/development-mode builds with the opt-in true still requiring real authentication. These checks are not claimed as passed.
 
 ## First administrator and authentication configuration
 

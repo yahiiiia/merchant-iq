@@ -3,12 +3,23 @@ import type { Session } from "@supabase/supabase-js";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabaseClient";
 import { errorMessage } from "@/lib/errors";
+import { OFFLINE_PREVIEW } from "@/lib/offline-preview";
 
 export type Profile = { id: string; name: string; email: string; role: "super_admin" | "business_user"; status: "pending" | "approved" | "disabled"; approvedAt?: string };
 type SessionContext = { session: Session | null; profile: Profile | null; loading: boolean; error: string; recovery: boolean; isAdmin: boolean; refreshProfile: () => Promise<void>; signOut: () => Promise<void>; finishRecovery: () => void };
 const Context = createContext<SessionContext | null>(null);
 
 export function SessionContextProvider({ children }: { children: ReactNode }) {
+  if (OFFLINE_PREVIEW) return <Context.Provider value={{
+    session: null, profile: null, loading: false, error: "", recovery: false, isAdmin: false,
+    refreshProfile: async () => {},
+    signOut: async () => { throw new Error("Account operations are disabled in offline preview."); },
+    finishRecovery: () => {},
+  }}>{children}</Context.Provider>;
+  return <ConnectedSessionProvider>{children}</ConnectedSessionProvider>;
+}
+
+function ConnectedSessionProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);

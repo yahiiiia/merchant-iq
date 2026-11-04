@@ -1,10 +1,12 @@
 import { Navigate, Outlet } from "react-router-dom";
 import { useSession } from "@/components/SessionProvider";
 import { Button } from "@/components/ui/button";
+import { OFFLINE_PREVIEW } from "@/lib/offline-preview";
 
 export function AuthLoading() { return <div className="flex min-h-[50vh] items-center justify-center text-sm text-muted-foreground" role="status">Loading your workspace…</div>; }
 export default function AuthGuard({ adminOnly = false }: { adminOnly?: boolean }) {
   const { loading, session, profile, error, recovery, refreshProfile, isAdmin } = useSession();
+  if (OFFLINE_PREVIEW) return <Outlet />;
   if (loading) return <AuthLoading />;
   if (recovery) return <Navigate to="/reset-password" replace />;
   if (!session) return <Navigate to="/login" replace />;
