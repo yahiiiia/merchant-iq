@@ -1,101 +1,44 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;450;500;550;600;650;700&family=Manrope:wght@400;500;600;650;700;750;800&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
-
-    --radius: 0.5rem;
-
-    --sidebar-background: 0 0% 98%;
-
-    --sidebar-foreground: 240 5.3% 26.1%;
-
-    --sidebar-primary: 240 5.9% 10%;
-
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --background: 220 25% 97.5%; --foreground: 222 28% 18%;
+    --card: 0 0% 100%; --card-foreground: 222 28% 18%;
+    --popover: 0 0% 100%; --popover-foreground: 222 28% 18%;
+    --primary: 221 83% 53%; --primary-foreground: 0 0% 100%;
+    --secondary: 220 22% 96%; --secondary-foreground: 222 25% 25%;
+    --muted: 220 22% 96%; --muted-foreground: 218 12% 44%;
+    --accent: 219 100% 96%; --accent-foreground: 221 75% 45%;
+    --destructive: 0 72% 48%; --destructive-foreground: 0 0% 100%;
+    --border: 220 20% 91%; --input: 220 20% 87%; --ring: 221 83% 53%;
+    --radius: 0.65rem;
   }
-
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --background: 222 28% 10%; --foreground: 218 25% 91%;
+    --card: 222 25% 13%; --card-foreground: 218 25% 91%;
+    --popover: 222 25% 13%; --popover-foreground: 218 25% 91%;
+    --primary: 217 92% 66%; --primary-foreground: 222 30% 12%;
+    --secondary: 222 23% 18%; --secondary-foreground: 218 25% 91%;
+    --muted: 222 23% 18%; --muted-foreground: 218 14% 67%;
+    --accent: 220 40% 21%; --accent-foreground: 215 90% 78%;
+    --destructive: 0 75% 63%; --destructive-foreground: 222 30% 12%;
+    --border: 221 20% 22%; --input: 221 20% 28%; --ring: 217 92% 66%;
   }
+  * { @apply border-border; }
+  body { @apply bg-background text-foreground antialiased; font-family: 'DM Sans', sans-serif; font-size: 14px; }
+  h1,h2,h3,.brand { font-family: 'Manrope', sans-serif; }
+  button, input, select, textarea { font: inherit; }
+  button, a, input, select, textarea { @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background; }
+  select { @apply bg-card; }
+  ::selection { @apply bg-primary/20; }
 }
-
-@layer base {
-  * {
-    @apply border-border;
-  }
-
-  body {
-    @apply bg-background text-foreground;
-  }
+@layer components {
+  .panel { @apply rounded-xl border bg-card shadow-[0_2px_3px_0_rgba(20,30,60,0.015)]; }
+  .field { @apply h-10 w-full rounded-lg border border-input bg-card px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/10; }
+  .eyebrow { @apply text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground; }
+  .table-head { @apply h-11 whitespace-nowrap bg-muted/60 px-5 text-left text-[11px] font-medium text-muted-foreground; }
+  .table-cell { @apply h-[68px] border-t px-5 text-[12px]; }
 }
