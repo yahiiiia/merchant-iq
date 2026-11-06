@@ -2,6 +2,12 @@
 
 React/TypeScript CRM using Supabase PostgreSQL and Auth, React Router, TanStack Query, Tailwind, shadcn/ui, and Recharts.
 
+## Lead workspace and scraper preparation
+
+The CRM now includes `/leads` (server-backed Lead Explorer), persistent notes/call logs and activity history on lead details, and `/scraper` (admin draft preparation, database job monitoring, stored-import CSV export and processing-stage views). The original lead directory is preserved at `/leads/directory`.
+
+Scraper **execution is not connected**: no VPS calls, credentials, simulated jobs or fake metrics. Draft saving is a real Supabase operation, not a job launch. The existing Gosom/FastAPI services are not modified. See [CRM pipeline and integration boundaries](docs/crm-pipeline.md) for the additive database objects, Raw → Cleaned → Validated → Qualified design, typed API client, pending HTTPS/authentication setup, and SQL test results/build-test limitations.
+
 ## Backend implementation
 
 - Project: `eujbgwltfdiwqatnvmik` (connected CRM project).

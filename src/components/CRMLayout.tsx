@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { NavLink, Outlet, Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Store, ContactRound, Layers, Server, ShieldCheck, Menu, Moon, Sun, X, LogOut } from "lucide-react";
+import { LayoutDashboard, Store, ContactRound, Layers, Server, ShieldCheck, Menu, Moon, Sun, X, LogOut, ScanSearch } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "next-themes";
 import { useDashboard } from "@/lib/crm";
@@ -10,7 +10,8 @@ import { toast } from "sonner";
 import { OFFLINE_PREVIEW } from "@/lib/offline-preview";
 import OfflinePreviewBanner from "@/components/OfflinePreviewBanner";
 
-const nav = [{ to: "/", label: "Overview", icon: LayoutDashboard }, { to: "/merchants", label: "Merchants", icon: Store }, { to: "/contacts", label: "Contacts", icon: ContactRound }, { to: "/leads", label: "Leads", icon: Layers }];
+const nav = [{ to: "/", label: "Overview", icon: LayoutDashboard }, { to: "/merchants", label: "Merchants", icon: Store }, { to: "/contacts", label: "Contacts", icon: ContactRound }, { to: "/leads", label: "Lead Explorer", icon: Layers }];
+const adminNav = [{ to: "/scraper", label: "Scraper Control", icon: ScanSearch }, { to: "/vps", label: "VPS Control", icon: Server }, { to: "/access", label: "Access", icon: ShieldCheck }];
 export function Brand() {
   return <span className="flex items-center gap-2.5"><span className="flex h-8 w-8 items-center justify-center rounded-[9px] bg-primary text-primary-foreground"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 17V7l8 7 8-7v10M4 7h4v3m12-3h-4v3" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" /></svg></span><span className="brand text-[20px] font-extrabold tracking-[-0.8px]">Merchant<span className="text-primary">IQ</span></span></span>;
 }
@@ -23,7 +24,7 @@ export default function CRMLayout() {
   const identity = OFFLINE_PREVIEW ? "Local test workspace" : profile?.name || profile?.email || "";
   const roleLabel = OFFLINE_PREVIEW ? "Offline preview" : isAdmin ? "Super Admin" : "Business User";
   const { pathname } = useLocation();
-  const current = [...nav, { to: "/vps", label: "VPS Control" }, { to: "/access", label: "Access" }].find(n => n.to === "/" ? pathname === "/" : pathname.startsWith(n.to));
+  const current = [...nav, ...adminNav].find(n => n.to === "/" ? pathname === "/" : pathname.startsWith(n.to));
   async function logout() { setSigningOut(true); try { await signOut(); } catch (e) { toast.error(errorMessage(e)); } finally { setSigningOut(false); } }
   return <div className="min-h-screen">
     {open && <button aria-label="Close navigation" className="fixed inset-0 z-40 bg-slate-950/40 lg:hidden" onClick={() => setOpen(false)} />}
@@ -32,7 +33,7 @@ export default function CRMLayout() {
       <div className="mx-4 mb-7 flex items-center gap-2.5 rounded-lg border p-2.5"><div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted text-[12px] font-bold">M</div><div><div className="text-[12px] font-semibold">{OFFLINE_PREVIEW ? "Fictional test workspace" : "Merchant workspace"}</div><div className="mt-0.5 text-[10px] text-muted-foreground">{OFFLINE_PREVIEW ? "Local memory · no sync" : "Canadian business directory"}</div></div></div>
       <div className="px-6 pb-3 eyebrow">Workspace</div>
       <nav className="space-y-1 px-3">{nav.map(({ to, label, icon: Icon }) => <NavLink key={to} to={to} end={to === "/"} onClick={() => setOpen(false)} className={({ isActive }) => `flex items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium transition-colors ${isActive ? "bg-accent text-primary" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}><Icon size={17} strokeWidth={1.7} />{label}{to !== "/" && counts && <span className="ml-auto rounded bg-background/80 px-1.5 py-0.5 text-[10px] tabular-nums">{to === "/merchants" ? counts.merchants : to === "/contacts" ? counts.contacts : counts.leads}</span>}</NavLink>)}</nav>
-      {showAdminScreens && <><div className="mx-6 mb-4 mt-7 border-t" /><div className="px-6 pb-3 eyebrow">{OFFLINE_PREVIEW ? "Read-only admin preview" : "Administration"}</div><nav className="space-y-1 px-3">{[{ to: "/vps", label: "VPS Control", icon: Server }, { to: "/access", label: "Access", icon: ShieldCheck }].map(({ to, label, icon: Icon }) => <NavLink key={to} to={to} onClick={() => setOpen(false)} className={({ isActive }) => `flex items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium ${isActive ? "bg-accent text-primary" : "text-muted-foreground hover:bg-muted"}`}><Icon size={17} strokeWidth={1.7} />{label}{to === "/vps" && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-muted-foreground/50" />}</NavLink>)}</nav></>}
+      {showAdminScreens && <><div className="mx-6 mb-4 mt-7 border-t" /><div className="px-6 pb-3 eyebrow">{OFFLINE_PREVIEW ? "Read-only admin preview" : "Administration"}</div><nav className="space-y-1 px-3">{adminNav.map(({ to, label, icon: Icon }) => <NavLink key={to} to={to} onClick={() => setOpen(false)} className={({ isActive }) => `flex items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-medium ${isActive ? "bg-accent text-primary" : "text-muted-foreground hover:bg-muted"}`}><Icon size={17} strokeWidth={1.7} />{label}{["/vps", "/scraper"].includes(to) && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-muted-foreground/50" />}</NavLink>)}</nav></>}
       <div className="mt-auto p-4"><div className="rounded-xl border border-dashed bg-background p-3.5"><div className="mb-2 flex items-center gap-2 text-[12px] font-semibold"><ShieldCheck size={14} className="text-primary" />{OFFLINE_PREVIEW ? "Development only" : "Business workspace"}</div><p className="text-[11px] leading-relaxed text-muted-foreground">{OFFLINE_PREVIEW ? "No signed-in account. Fictional local records only; production access is unchanged." : "Your account is approved. Record access is checked by the database."}</p></div></div>
       <div className="flex items-center gap-3 border-t px-5 py-4"><div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent text-[11px] font-semibold text-primary">{(identity || "U").slice(0, 2).toUpperCase()}</div><div className="min-w-0 flex-1"><div className="truncate text-[12px] font-semibold">{identity}</div><div className="text-[10px] text-muted-foreground">{roleLabel}</div></div>{!OFFLINE_PREVIEW && <Button disabled={signingOut} variant="ghost" size="icon" aria-label="Sign out" className="h-7 w-7 shrink-0 text-muted-foreground" onClick={() => void logout()}><LogOut size={14} /></Button>}</div>
     </aside>

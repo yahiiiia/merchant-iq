@@ -1,6 +1,7 @@
 import { fieldsFor, statuses, type Entity, type RecordData } from "@/lib/crm-fields";
 import type { Dashboard, ListOptions, ListResult } from "@/lib/crm";
 import { OFFLINE_PREVIEW } from "@/lib/offline-preview";
+import type { LeadActivity, LeadView } from "@/lib/pipeline-types";
 
 if (!OFFLINE_PREVIEW) throw new Error("Local test data is only available in explicitly enabled development preview.");
 
@@ -113,6 +114,10 @@ export function save(entity: Entity, record: RecordData, editing: boolean) {
     store.leads = store.leads.map(l => l.contactId === row.id ? { ...l, contactId: null, updatedAt: now } : l);
   }
   store[entity] = editing ? store[entity].map(r => r.id === row.id ? row : r) : [...store[entity], row];
+  if (entity === "leads") {
+    const changes = Object.fromEntries(Object.entries(row).filter(([key, value]) => !["createdAt", "updatedAt"].includes(key) && value !== existing?.[key]).map(([key, value]) => [key, { before: existing?.[key] ?? null, after: value }]));
+    if (!editing || Object.keys(changes).length) activities.push({ id: crypto.randomUUID(), leadId: row.id, actorId: null, kind: editing ? "updated" : "created", body: editing ? "Local test lead updated" : "Local test lead created", changes: editing ? changes : {}, createdAt: now });
+  }
 }
 export function remove(entity: Entity, ids: string[]) {
   if (ids.some(id => !store[entity].some(r => r.id === id))) throw new Error("Some local test records no longer exist.");
@@ -141,4 +146,33 @@ export function exportRecords(entity: Entity, options: ListOptions, selected: st
   if (rows.length !== selected.length) throw new Error("Some selected local test records no longer exist.");
   return rows.map(row => joined(entity, row));
 }
-export function reset() { store = seed(); }
+let activities: LeadActivity[] = [];
+export function exploreLeads(options: ListOptions, view: LeadView): ListResult {
+  const { page = 1, pageSize = 25, search = "", filters = {}, sort = "createdAt", asc = false } = options;
+  const today = new Date().toISOString().slice(0, 10);
+  const rows = store.leads.map(lead => {
+    const merchant = store.merchants.find(m => m.id === lead.merchantId)!;
+    const contact = store.contacts.find(c => c.id === lead.contactId);
+    return { ...lead, merchantName: merchant.name, industry: merchant.industry, phone: merchant.phone, email: merchant.email, city: merchant.city, province: merchant.province, website: merchant.website, source: merchant.source, merchantSourceId: merchant.sourceId, contactName: contact?.name || null, contactPhone: contact?.phone || null, contactEmail: contact?.email || null, assignedName: directory.find(u => u.id === lead.assignedUser)?.name || null, dataQualityScore: null, salesPriorityScore: null } as RecordData;
+  }).filter(row =>
+    (view !== "mine") &&
+    (view !== "available" || !row.assignedUser && !["Won", "Lost"].includes(String(row.status))) &&
+    (view !== "due" || !!row.followUp && String(row.followUp) <= today && !["Won", "Lost"].includes(String(row.status))) &&
+    Object.entries(filters).every(([key, value]) => !value || (key === "selectedIds" ? value.split(",").includes(row.id) : String(row[key] ?? "") === value)) &&
+    (!search.trim() || Object.values(row).some(value => normalize(value).includes(normalize(search))))
+  ).sort((a, b) => {
+    const order = String(a[sort] ?? "").localeCompare(String(b[sort] ?? ""));
+    return (asc ? order : -order) || a.id.localeCompare(b.id);
+  });
+  return { rows: rows.slice((page - 1) * pageSize, page * pageSize), total: rows.length };
+}
+export function leadActivities(leadId: string, page: number) {
+  const rows = activities.filter(a => a.leadId === leadId).slice().reverse();
+  return { rows: rows.slice((page - 1) * 10, page * 10), total: rows.length };
+}
+export function addLeadActivity(leadId: string, kind: "note" | "call", body: string) {
+  if (!store.leads.some(l => l.id === leadId)) throw new Error("Local test lead not found.");
+  activities.push({ id: crypto.randomUUID(), leadId, actorId: null, kind, body, changes: {}, createdAt: new Date().toISOString() });
+  if (kind === "call") store.leads = store.leads.map(l => l.id === leadId ? { ...l, lastContact: new Date().toISOString().slice(0, 10), updatedAt: new Date().toISOString() } : l);
+}
+export function reset() { store = seed(); activities = []; }

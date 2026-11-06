@@ -15,6 +15,8 @@ import Index from "@/pages/Index";
 import Records from "@/pages/Records";
 import RecordDetail from "@/pages/RecordDetail";
 import VPSControl from "@/pages/VPSControl";
+import ScraperControl from "@/pages/ScraperControl";
+import LeadExplorer from "@/pages/LeadExplorer";
 import Access from "@/pages/Access";
 import NotFound from "@/pages/NotFound";
 
@@ -33,9 +35,11 @@ export default function App() {
           <Route path="/merchants/:id" element={<RecordDetail key="merchant-detail" entity="merchants" />} />
           <Route path="/contacts" element={<Records key="contacts" entity="contacts" />} />
           <Route path="/contacts/:id" element={<RecordDetail key="contact-detail" entity="contacts" />} />
-          <Route path="/leads" element={<Records key="leads" entity="leads" />} />
+          <Route path="/leads" element={<LeadExplorer />} />
+          <Route path="/leads/directory" element={<Records key="leads" entity="leads" />} />
           <Route path="/leads/:id" element={<RecordDetail key="lead-detail" entity="leads" />} />
           <Route element={<AuthGuard adminOnly />}>
+            <Route path="/scraper" element={<ScraperControl />} />
             <Route path="/vps" element={<VPSControl />} />
             <Route path="/access" element={<Access />} />
           </Route>
