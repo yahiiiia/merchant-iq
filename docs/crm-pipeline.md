@@ -5,7 +5,7 @@
 - `/leads`: joined Lead Explorer with PostgreSQL search, province/industry/source/status/assignee filters, display-label sorting, All/Available/My Leads/Follow-ups Due views, selection and CSV export. Due dates are evaluated in UTC. Available is an unassigned/open-record filter, not a claim or reservation operation.
 - `/leads/directory`: preserved original lead directory, including existing bulk deletion/export workflows.
 - `/leads/:id`: existing persistent editor, primary contact information, source provenance, notes, call/contact-attempt logs, and paginated activity history. Call logging records a user-entered event; it does not place a telephone call.
-- `/scraper`: approved-Super-Admin-only draft preparation, Supabase job history/status inspection, stored-import CSV export, processing-stage counts and import provenance. Database monitoring polls every 15 seconds while mounted; it is not VPS health monitoring.
+- `/scraper`: approved-Super-Admin-only live FastAPI launch, job history/details/status refresh and original CSV downloads, alongside separate Supabase drafts, recorded history, stored-import CSV export and processing views. Live API views poll every 15 seconds while visible; database views retain their existing polling. Neither is VPS infrastructure health telemetry.
 - `/vps`: unchanged disconnected infrastructure placeholder.
 
 Existing authentication, approvals, business CRUD and CSV merchant imports remain in place. The existing policy permits approved accounts to read/create/update shared business records, including assignment fields; this release does not introduce exclusive ownership, atomic claiming, or restrict existing shared editing. Do not advertise an exclusive lead-claim workflow until its database protections are implemented and concurrency-tested.
@@ -45,37 +45,55 @@ External source idempotency is `(source, sourceRecordId)`. The backend must choo
 
 ## What the Scraper Control buttons do
 
-- **Prepare job** opens real editable settings. **Save draft only** persists the validated draft in Supabase and explicitly reports that no scraper ran.
-- Draft deletion removes only an unsubmitted database draft, never a VPS job.
-- **Inspect** displays database status, external ID, reported counts/errors and the latest 20 processing runs.
-- **Refresh database** re-queries Supabase, not `/scraper/health`.
-- **Export stored import CSV** reads permitted imported rows in batches and creates a real CSV with source metadata and the original payload in a JSON column. It is not the original Gosom CSV. No stored rows means an informative message, not fabricated download success.
-- Launch and original VPS CSV controls are disabled and labeled pending. There is no operational stop/retry/health button or fake server telemetry.
+### Live scraper jobs (FastAPI)
 
-Exports use deterministic offset ordering and spreadsheet-formula escaping. They are not transactional snapshots: concurrent changes during an export can affect completeness. Large export streaming and keyset pagination should be benchmarked against real dataset sizes before high-volume deployment.
+- **Launch job** submits one validated POST to `/scraper/jobs`. Name and 1–5 nonblank keyword lines are required. Latitude/longitude start blank, must be in range, are always sent as strings, and require the user's location-verification checkbox. No city geocoding or fallback coordinates are used.
+- The required coordinate help is displayed beside the inputs, with a Google Maps verification link. ChatGPT coordinates are suggestions, not verified geocoding results. A future server-side geocoder should return candidates for explicit user selection rather than silently picking a city.
+- Radius is entered in **kilometres**, minimum 0.1 km, and converted to an integer number of **metres**. `zoom` is 1–21, `depth` 1–10, `email` and `fast_mode` are booleans. UI defaults for these non-location settings match the published request defaults.
+- The runtime control is presented in seconds and sends `max_time` unchanged in the contract's 30–3600 range. Do not multiply by one billion in the frontend: forwarding nanoseconds to Gosom remains the existing backend's responsibility.
+- No `maxResults` is sent or promised. Optional `proxies` are omitted; proxy credentials are not entered or stored by this UI.
+- **Refresh live jobs** reads `/scraper/jobs`. **Details** reads `/scraper/jobs/{id}`. A UUID can also be entered directly. Returned fields and status values are preserved, not translated into assumed enums, completion states, counters or progress percentages.
+- **Original CSV** requests `/scraper/jobs/{id}/download` with the Supabase access token. The backend determines readiness. Non-2xx responses, JSON/HTML responses and empty files produce errors rather than successful downloads. Successful file bytes are not transformed; the UI requests a browser download and does not claim that the user saved it.
+- Refresh failures are visible. Previously loaded data remains explicitly timestamped as a retained response. Filtering and pagination apply only to the collection returned by the API, not an invented server-wide total.
 
-## Typed API layer
+### Supabase drafts & processing
 
-`src/lib/scraper-api.ts` provides `createScraperApi(transport, contract)` with typed create/list/get/download/health operations for the supplied internal paths. It has no default HTTP transport, API origin, VPS IP, secret, automatic request, or application activation switch. No screen instantiates it. Runtime Zod schemas must be supplied from the confirmed backend contract; neither response envelopes nor job-creation payloads were guessed. `ScraperDraft` is a CRM model, not a claimed FastAPI wire format.
+- **Save a draft / Save draft only** retains the existing city/province/language draft format. The legacy results preference is explicitly **not enforced** and is never mapped to the live request.
+- Draft deletion removes only an unsubmitted database draft, never a VPS job. There is no automatic submission/linkage of drafts or browser update of execution states.
+- **Inspect** displays database status, recorded external ID/counts/errors and the latest 20 processing runs. These are not labeled live Gosom statuses.
+- **Refresh database** re-queries Supabase, not the scraper API.
+- **Export stored import CSV** reads permitted imported rows in batches and exports provenance and original payload JSON. This is distinct from the original Gosom file; no stored rows means an informative message.
+- Processing-stage counts and imported businesses retain their existing queries and permissions. A live scraper submission or download does not import, clean, validate or qualify businesses.
 
-The future transport must reject non-2xx responses, enforce timeouts/cancellation, and must not turn error responses into blobs or successful JSON. It must be installed only after HTTPS, JWT verification, authorization and the actual API schemas have been reviewed. Keep backend tokens and any service-role key outside browser bundles and `VITE_*` settings.
+Stored-import exports retain deterministic offset ordering and spreadsheet-formula escaping; original Gosom downloads are intentionally unmodified. Stored exports are not transactional snapshots: concurrent changes can affect completeness. Large export streaming and keyset pagination remain future performance work.
 
-## Pending integration and deployment prerequisites
+## Typed API layer and contract limitations
 
-1. Confirm actual FastAPI OpenAPI request/response schemas and job-ID/status semantics for `/scraper/jobs`, `/scraper/jobs/{id}`, `/scraper/jobs/{id}/download`, `/scraper/health`.
-2. Make the future `https://api.merchantiq.net` boundary reachable over authenticated HTTPS. Its server must verify Supabase JWTs (signature, issuer, audience and expiry) and current approved Super Admin status for scraper administration, not trust a decoded token or frontend role flag. The current internal FastAPI/Gosom services do not need to be rebuilt.
-3. Configure TLS, allowed origins for `https://merchantiq.net`, deployment routing, rate limits, timeout/error behavior and authenticated downloads. Do not expose internal Docker APIs or unprotected scraper endpoints.
-4. Implement a server-side submission/reconciliation path: draft IDs can serve as idempotency identifiers, but submission must avoid double-launches and reconcile uncertain network outcomes. Only confirmed backend events may advance execution state. No such dispatcher or worker is installed by this release.
-5. Configure trusted ingestion/status synchronization and processing workers to write Supabase. Do not put credentials in the browser. No VPS requests or infrastructure changes were made in this implementation.
-6. Explicitly approve the intended administrator through a trusted Supabase action, and configure Auth redirect allowlists for `https://merchantiq.net/auth/callback` and `/reset-password`. The account bootstrap is never automatic.
+- `src/lib/scraper-api.ts`: existing injected `createScraperApi(transport, contract)` abstraction for create/list/get/download/health.
+- `src/lib/scraper-transport.ts`: existing production origin `https://api.merchanthq.tech` and Bearer-token session transport, now with 30-second JSON/120-second file timeouts, cancellation, redirect rejection, offline blocking and safe HTTP error messages. There is no service-role key or backend secret.
+- `src/lib/scraper-contract.ts`: runtime request validation from root `openapi.json` (MerchantIQ API 0.2.0). Request coordinates are deliberately stricter than the backend defaults: they must be explicitly supplied. Responses remain `unknown` at the boundary because the specification gives every successful response schema as `{}`; even the download is documented generically as JSON despite its file purpose.
+- `src/lib/scraper-jobs.ts`: approved-admin/offline-gated live queries, per-user query keys, cancellation, no automatic request retries, and original-file download handling. Supabase pipeline hooks remain separate.
+
+The list renderer recognizes a direct array of objects or actual `jobs`/`data` array properties. This is a defensive display adapter, **not a claim that these envelopes were verified against production**. It reads actual case-insensitive `id`/`job_id`, `name`, and `status` fields when present. IDs must be UUIDs, matching the path contract. Unexpected envelopes are displayed as raw responses, never silently counted as zero jobs; other returned fields remain inspectable. Known credential fields are redacted from response displays. Raw authenticated production payloads and the actual status vocabulary have not been retrieved in this editor session. Captured sanitized responses should be used to tighten response schemas later; no backend changes are needed to display existing fields.
+
+## Production boundaries and remaining work
+
+The owner confirms production CRM `https://merchanthq.tech`, API `https://api.merchanthq.tech`, HTTPS, Supabase ES256 JWT validation, approved-Super-Admin authorization on scraper endpoints, CORS, and an authenticated list response containing three existing jobs. These are owner-reported operational facts, not new tests performed by this frontend change. Docker, Caddy, Nginx, FastAPI and Supabase authentication were not changed. No infrastructure rebuild or deployment was performed.
+
+1. Run application/config TypeScript checks and the production build before pushing. `package.json` now exposes `typecheck`, and `build` runs it before Vite bundling. No command runner or Git push tool is available in this editor session, so neither checks nor push are claimed successful.
+2. Capture sanitized real create/list/detail responses and confirm actual status values, seconds-to-nanoseconds backend forwarding, download readiness/error behavior and MIME type. The supplied OpenAPI has no response DTOs/status enums and no idempotency or pagination contract. Do not interpret this source-level integration as completed runtime verification.
+3. POST is never automatically retried. An acknowledgement is shown as the actual response, not fabricated job progress. Network/timeouts/ambiguous server failures warn that submission outcome is unknown and require explicit confirmation before another attempt. Client click guards are not persistent idempotency: cross-tab/reload/retry duplicate prevention needs existing or future server-side support. No backend changes were made here.
+4. Trusted Supabase ingestion, job reconciliation and Raw → Qualified processing remain separate integrations. Browser API access does not install workers or synchronize execution records.
+5. Keep Auth redirects allowlisted for `https://merchanthq.tech/auth/callback` and `/reset-password`. Existing authentication/bootstrap remains unchanged; there is no automatic first-user promotion.
+6. Deployment is explicitly left to the owner on the VPS after checks and GitHub synchronization succeed.
 
 ## Offline development
 
 The existing explicit development-only preview is preserved. Explorer and notes/call logs use the isolated memory-only store, with no fabricated session/role. Scraper draft saving, job monitoring, pipeline administration and imported downloads are disabled offline; no fake jobs, processing runs, scores or metrics are seeded. My Leads is empty offline because there is no real authenticated account. All production builds continue to compile the preview gate false.
 
-## Verification in this release
+## Historical database verification (prior CRM release)
 
-Executed successfully against the connected database using authenticated-role simulation inside rollback-only subtransactions:
+The following tests were executed in the prior CRM/pipeline release, not rerun as part of the live API UI change. They used authenticated-role simulation inside rollback-only subtransactions:
 
 - Signup defaults and pending-user denial; approved Business User denial of scraper administration and raw staging.
 - Admin draft creation/deletion, real actor attribution, and rejection of direct client execution-state writes.
@@ -84,6 +102,12 @@ Executed successfully against the connected database using authenticated-role si
 - Score bounds, source ID uniqueness, no skipped processing stages, matching completed-run requirements, evidence-backed qualification and sanitized provenance.
 - New-table RLS and effective grants: no anonymous reads and no authenticated direct inserts/updates/deletes.
 
-Fixture counts were checked afterward: the original 1 profile and 0 approved Super Admins remained; all business and new pipeline/activity tables had 0 records. No test accounts or business records were retained.
+Historical fixture counts were checked afterward: the then-existing 1 profile and 0 approved Super Admins remained; all business and new pipeline/activity tables had 0 records. These are prior test-run counts, not current production metrics. No test accounts or business records were retained.
 
-Not executed: TypeScript compiler, Vite production/development builds, ESLint, browser/UI/network tests, actual Auth email flows, real FastAPI/Gosom HTTP integration, load tests, backup/restore drills, or production domain/TLS checks. The available editor tools do not provide a shell/build runner or browser automation. Source review and successful SQL tests are not production-readiness certification.
+## Live scraper UI verification status
+
+Performed: read the supplied OpenAPI before coding; source-reviewed request fields/ranges, required blank coordinates, exact coordinate-help copy, kilometre-to-metre mapping, unchanged FastAPI runtime value, no maxResults mapping, separate per-user live versus Supabase queries, no automatic POST retry, download/auth/offline guards, and preserved route/admin boundaries. Checked source for obsolete integration-pending/domain references and updated documentation. This is source review, not a compiler or runtime test.
+
+Not executed in this editor session: TypeScript checks, production build, ESLint, browser interaction tests, authenticated FastAPI requests, actual Gosom status/response fixture verification, launch/download smoke tests or GitHub push. The available tools have no command runner, browser harness or push operation. No database migrations, backend/infrastructure edits or live deployment were performed.
+
+Before release, verify: both TypeScript projects and production bundle; existing authenticated three-job history; a deliberately selected coordinate launch with km/metre and seconds/nanosecond forwarding inspection; actual raw status/details fields; completed-job CSV bytes; unavailable-file errors; 401/403 behavior; uncertain POST handling without automatic retry; draft save/delete and stored import export; and offline preview producing zero hosted requests. Do not push until the requested checks succeed. Deployment remains an owner-controlled VPS action.

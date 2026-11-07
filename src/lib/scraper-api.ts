@@ -1,10 +1,5 @@
 import type { z } from "zod";
 
-export const scraperIntegration = {
-  state: "awaiting_authenticated_https" as const,
-  message: "Waiting for authenticated HTTPS backend integration. No VPS requests are made by this application.",
-};
-
 export type ScraperRequest = {
   method: "GET" | "POST";
   path: string;
@@ -12,8 +7,7 @@ export type ScraperRequest = {
   response: "json" | "blob";
   signal?: AbortSignal;
 };
-// A future authenticated gateway supplies this transport. No fetch implementation,
-// network origin, credentials, or automatic connection is bundled here.
+// The authenticated transport is supplied separately from this API abstraction.
 export interface ScraperTransport { request(request: ScraperRequest): Promise<unknown> }
 export type ScraperContract<Input, Job, JobList, Health> = {
   createInput: z.ZodType<Input>;

@@ -2,11 +2,19 @@
 
 React/TypeScript CRM using Supabase PostgreSQL and Auth, React Router, TanStack Query, Tailwind, shadcn/ui, and Recharts.
 
-## Lead workspace and scraper preparation
+## Lead workspace and live Google Maps scraper
 
-The CRM now includes `/leads` (server-backed Lead Explorer), persistent notes/call logs and activity history on lead details, and `/scraper` (admin draft preparation, database job monitoring, stored-import CSV export and processing-stage views). The original lead directory is preserved at `/leads/directory`.
+The CRM includes `/leads` (server-backed Lead Explorer), persistent notes/call logs and activity history on lead details, and `/scraper`. The original lead directory is preserved at `/leads/directory`.
 
-Scraper **execution is not connected**: no VPS calls, credentials, simulated jobs or fake metrics. Draft saving is a real Supabase operation, not a job launch. The existing Gosom/FastAPI services are not modified. See [CRM pipeline and integration boundaries](docs/crm-pipeline.md) for the additive database objects, Raw → Cleaned → Validated → Qualified design, typed API client, pending HTTPS/authentication setup, and SQL test results/build-test limitations.
+Production CRM: `https://merchanthq.tech`. Production API: `https://api.merchanthq.tech`. The owner reports HTTPS, ES256 Supabase JWT validation, approved-Super-Admin endpoint authorization and production CORS already operational. This frontend change does not rebuild or deploy that infrastructure.
+
+Scraper Control now has separate **Live scraper jobs** and **Supabase drafts & processing** views. Live launch/history/details/original CSV downloads use the existing Bearer-token transport and API abstraction. Supabase draft saving, recorded history, stored-import exports and processing views remain independent. There is no automatic job-to-Supabase synchronization or ingestion.
+
+Launch requires manually entered latitude/longitude and Google Maps verification. Radius is displayed in kilometres and sent as integer metres. `max_time` is sent unchanged in the FastAPI contract’s 30–3600 range, presented as seconds; Gosom nanosecond forwarding remains server-side. No location defaults or `maxResults` parameter are sent. Optional proxies are omitted; no proxy credentials are stored in the UI.
+
+`openapi.json` describes the request but leaves successful response schemas empty. The UI preserves returned statuses and exposes actual fields/raw responses; it does not invent status enums, progress or result counts. Unrecognized response envelopes are shown explicitly, not silently turned into zero jobs. See [CRM pipeline and integration boundaries](docs/crm-pipeline.md) for contract handling and remaining runtime verification.
+
+The production `build` script now gates Vite bundling on the new `typecheck` script (application and Vite-config TypeScript projects). These checks were **not executed in this editor session**, which has no command runner. No GitHub push or live deployment was performed.
 
 ## Backend implementation
 
@@ -65,9 +73,9 @@ All auth email redirects use absolute callback URLs built from the current app o
 
 CSV imports use the downloadable template (up to 5 MB / 2,000 rows); exported files include IDs/metadata and are not import templates. Imports do not overwrite or merge existing records. Contact relationships are added afterward. Exports retrieve selected records or all filtered records in batches and escape spreadsheet formula-like values. Concurrent changes during a long export can affect an offset-paginated export; it is not a transactional snapshot.
 
-## Verification performed in this implementation
+## Historical database verification (prior CRM implementation)
 
-Successful rollback-only SQL suites simulated authenticated and anonymous database roles and asserted:
+The following rollback-only SQL suites were performed during the original Supabase implementation, not rerun for the live scraper UI update. They simulated authenticated and anonymous database roles and asserted:
 - Signup metadata cannot grant role/approval.
 - Pending/disabled accounts cannot read business data; anonymous table/function access is denied.
 - Approved Business Users can create merchants/contacts/leads and update records, but cannot delete, directly edit profiles, manage accounts, or invoke administrative imports.
@@ -83,4 +91,4 @@ Not executed in this turn: TypeScript compiler/build/lint, browser interaction t
 
 ## VPS scope
 
-VPS Control remains an approved-Super-Admin-only, disconnected placeholder. It has no scrapers, AI agents, operational VPS endpoints, WebSockets, infrastructure credentials, server metrics, or execution controls. Future operations require a separately authorized backend integration; nothing in this change connects to Hostinger.
+VPS Control remains an approved-Super-Admin-only, disconnected infrastructure placeholder. It has no Docker/Hostinger controls, agents, infrastructure credentials or fabricated server telemetry. Scraper Control separately connects to the existing authorized FastAPI scraper endpoints; it does not manage containers, Caddy, Nginx, deployment or the VPS itself.
