@@ -8,13 +8,15 @@ The CRM includes `/leads` (server-backed Lead Explorer), persistent notes/call l
 
 Production CRM: `https://merchanthq.tech`. Production API: `https://api.merchanthq.tech`. The owner reports HTTPS, ES256 Supabase JWT validation, approved-Super-Admin endpoint authorization and production CORS already operational. This frontend change does not rebuild or deploy that infrastructure.
 
-Scraper Control now has separate **Live scraper jobs** and **Supabase drafts & processing** views. Live launch/history/details/original CSV downloads use the existing Bearer-token transport and API abstraction. Supabase draft saving, recorded history, stored-import exports and processing views remain independent. There is no automatic job-to-Supabase synchronization or ingestion.
+Scraper Control has separate **Scraping Jobs** and **Drafts & processing** views. **New Scrape**, **Start Scraping**, **Refresh**, **Details** and **Download Results** use the existing Bearer-token transport and API abstraction. Supabase draft saving, recorded history, stored-import exports and processing views remain independent. There is no automatic job-to-Supabase synchronization or ingestion.
+
+The jobs table shows actual job name, search, creation date and status. Dedicated scraper badges map `ok` to Completed, `working`/`running` to In Progress, `pending`/`queued` to Queued, failures to Failed, and cancellations to Cancelled. Unknown statuses stay neutral and retain their actual text. Raw status remains unchanged internally; Completed is not a promise that useful result rows exist. Job IDs and sanitized response data are collapsed under Technical Details rather than displayed in table rows.
 
 Launch requires manually entered latitude/longitude and Google Maps verification. Radius is displayed in kilometres and sent as integer metres. `max_time` is sent unchanged in the FastAPI contract’s 30–3600 range, presented as seconds; Gosom nanosecond forwarding remains server-side. No location defaults or `maxResults` parameter are sent. Optional proxies are omitted; no proxy credentials are stored in the UI.
 
-`openapi.json` describes the request but leaves successful response schemas empty. The UI preserves returned statuses and exposes actual fields/raw responses; it does not invent status enums, progress or result counts. Unrecognized response envelopes are shown explicitly, not silently turned into zero jobs. See [CRM pipeline and integration boundaries](docs/crm-pipeline.md) for contract handling and remaining runtime verification.
+`openapi.json` describes the request but leaves successful response schemas empty. The owner supplied the actual status vocabulary and Data/Date field names for the UI cleanup. The interface reads existing fields and does not invent progress, results, ETAs or completion times. Unexpected list responses show an error with collapsed diagnostics rather than a false zero-job history. See [CRM pipeline and integration boundaries](docs/crm-pipeline.md) for details.
 
-The production `build` script now gates Vite bundling on the new `typecheck` script (application and Vite-config TypeScript projects). These checks were **not executed in this editor session**, which has no command runner. No GitHub push or live deployment was performed.
+The production `build` script gates Vite bundling on the `typecheck` script (application and Vite-config TypeScript projects). These checks were **not executed in this editor session**, which has no command runner. No GitHub push or live deployment was performed.
 
 ## Backend implementation
 

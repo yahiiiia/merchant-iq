@@ -52,5 +52,16 @@ export function readLiveJobs(value: unknown): { jobs: LiveJob[]; recognized: boo
 }
 
 export function responseJson(value: unknown): string {
-  return JSON.stringify(value, (key, item: unknown) => /^(proxies|authorization|access_token|refresh_token|password|secret)$/i.test(key) ? "[redacted]" : item, 2) ?? "null";
+  function redact(key: string, item: unknown): unknown {
+    const normalized = key.replace(/[_-]/g, "").toLowerCase();
+    if (["proxies", "proxy", "authorization", "accesstoken", "refreshtoken", "token", "password", "secret", "apikey"].includes(normalized)) return "[redacted]";
+    if (normalized === "data" && typeof item === "string") {
+      try {
+        const parsed: unknown = JSON.parse(item);
+        if (parsed !== null && typeof parsed === "object") return JSON.stringify(parsed, redact);
+      } catch { return item; }
+    }
+    return item;
+  }
+  return JSON.stringify(value, redact, 2) ?? "null";
 }
